@@ -42,20 +42,52 @@ namespace CodexQuota.Tests
             Check(!NativeWindows.IsCodexExecutablePath(null), "Missing path rejected");
             var defaults = PlatformSupport.LoadSettings();
             Check(defaults.OffsetX == 0 && defaults.OffsetY == 8, "Default position");
+            Check(defaults.BackgroundColor == UsageBarSettings.DefaultBackgroundColor
+                && defaults.TextColor == UsageBarSettings.DefaultTextColor
+                && defaults.ProgressColor == UsageBarSettings.DefaultProgressColor, "Default colors preserve the current palette");
+            Check(UsageBarPalette.BorderColor(UsageBarSettings.DefaultBackgroundColor) == "#48494C"
+                && UsageBarPalette.TrackColor(UsageBarSettings.DefaultBackgroundColor) == "#4B4D52"
+                && UsageBarPalette.SecondaryTextColor(UsageBarSettings.DefaultBackgroundColor) == "#CFD1D5"
+                && UsageBarPalette.MutedTextColor(UsageBarSettings.DefaultBackgroundColor) == "#ACAFB4"
+                && UsageBarPalette.ErrorColor(UsageBarSettings.DefaultBackgroundColor) == "#F3C779", "Default palette rendering remains unchanged");
+            Check(UsageBarPalette.SecondaryTextColor("#EAECEF") == "#202124"
+                && UsageBarPalette.ErrorColor("#EAECEF") == "#805000", "Light backgrounds receive contrasting labels and status color");
             PlatformSupport.SaveSettings(new UsageBarSettings { OffsetX = -42.5, OffsetY = 12.25 });
             var loaded = PlatformSupport.LoadSettings();
             Check(loaded.OffsetX == -42.5 && loaded.OffsetY == 12.25, "Position round trip");
+            loaded.BackgroundColor = "#EAECEF";
+            loaded.TextColor = "#202124";
+            loaded.ProgressColor = "#3A7BD5";
+            PlatformSupport.SaveSettings(loaded);
+            loaded = PlatformSupport.LoadSettings();
+            Check(loaded.BackgroundColor == "#EAECEF" && loaded.TextColor == "#202124" && loaded.ProgressColor == "#3A7BD5",
+                "Custom colors round trip");
+            loaded.RestoreDefaultColors();
+            Check(loaded.BackgroundColor == UsageBarSettings.DefaultBackgroundColor
+                && loaded.TextColor == UsageBarSettings.DefaultTextColor
+                && loaded.ProgressColor == UsageBarSettings.DefaultProgressColor, "Restore defaults returns the original palette");
             string saved = File.ReadAllText(PlatformSupport.SettingsPath);
             bool rejected = false;
             try { PlatformSupport.SaveSettings(new UsageBarSettings { OffsetX = Double.NaN, OffsetY = 8 }); }
             catch (ArgumentOutOfRangeException) { rejected = true; }
             Check(rejected && File.ReadAllText(PlatformSupport.SettingsPath) == saved, "Invalid position does not overwrite");
+            rejected = false;
+            loaded.TextColor = "not-a-color";
+            try { PlatformSupport.SaveSettings(loaded); }
+            catch (ArgumentOutOfRangeException) { rejected = true; }
+            Check(rejected && File.ReadAllText(PlatformSupport.SettingsPath) == saved, "Invalid color does not overwrite");
+            File.WriteAllText(PlatformSupport.SettingsPath, "{\"offsetX\":1,\"backgroundColor\":\"broken\"}");
+            loaded = PlatformSupport.LoadSettings();
+            Check(loaded.OffsetX == 1 && loaded.BackgroundColor == UsageBarSettings.DefaultBackgroundColor
+                && loaded.TextColor == UsageBarSettings.DefaultTextColor, "Invalid colors recover to the current palette");
             File.WriteAllText(PlatformSupport.SettingsPath, "{broken-json");
             defaults = PlatformSupport.LoadSettings();
-            Check(defaults.OffsetX == 0 && defaults.OffsetY == 8, "Damaged settings recover");
+            Check(defaults.OffsetX == 0 && defaults.OffsetY == 8
+                && defaults.BackgroundColor == UsageBarSettings.DefaultBackgroundColor, "Damaged settings recover");
             File.WriteAllText(PlatformSupport.SettingsPath, "{\"offsetX\":-2.5}");
             loaded = PlatformSupport.LoadSettings();
-            Check(loaded.OffsetX == -2.5 && loaded.OffsetY == 8, "Missing member defaults");
+            Check(loaded.OffsetX == -2.5 && loaded.OffsetY == 8
+                && loaded.ProgressColor == UsageBarSettings.DefaultProgressColor, "Missing member defaults");
             Check(PlatformSupport.MutexName.StartsWith(@"Local\CodexUsageBar_"), "User-scoped mutex");
             Check(PlatformSupport.ShutdownEventName.StartsWith(@"Local\CodexUsageBar_Stop_"), "User-scoped stop event");
             return count;
