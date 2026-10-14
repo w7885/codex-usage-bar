@@ -14,9 +14,7 @@
 
 `NativeWindows` 按前台顶级窗口、进程路径和窗口类识别已验证的 MSIX Codex，返回物理坐标与 DPI；通过非激活样式和 `SetWindowPos` 跟随。
 
-`OverlayWindow` 管理跟随、定时刷新、拖动、卡片与托盘；配色设置窗口通过颜色对话框修改卡片背景、用量数字和正常状态进度条颜色，低用量红黄状态色保持不变。`OverlayPlacement` 把 DIP 偏移转换为物理像素并约束在目标窗口内。
-
-`UsageBarSettings` 将颜色和位置一起保存在 `state/settings.json`。旧设置缺少颜色字段时继续使用现有深色默认配色；自定义背景会自动调整辅助文字、边框与进度轨道颜色，以保持界面辨识度。
+`OverlayWindow` 管理跟随、定时刷新、拖动、卡片与托盘；`OverlayPlacement` 把 DIP 偏移转换为物理像素并约束在目标窗口内。
 
 `Program` 管理单实例、停止事件和诊断；`PlatformSupport` 保存位置、管理自身的用户级 Run 项。退出时关闭自己的 app-server。
 

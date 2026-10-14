@@ -42,8 +42,8 @@ namespace CodexQuota
         readonly UsageBarSettings settings;
         readonly DispatcherTimer followTimer;
         readonly DispatcherTimer refreshTimer;
-        readonly TextBlock fiveText, weekText, fiveLabel, weekLabel, statusText, dragHandle;
-        readonly Border fiveFill, weekFill, fiveTrack, weekTrack;
+        readonly TextBlock fiveText, weekText, statusText;
+        readonly Border fiveFill, weekFill;
         readonly Border panel;
         readonly System.Windows.Forms.NotifyIcon tray;
         readonly System.Windows.Forms.ToolStripMenuItem autoStart;
@@ -85,11 +85,11 @@ namespace CodexQuota
             ToolTipService.SetInitialShowDelay(panel, 250);
             ToolTipService.SetShowDuration(panel, 60000);
             var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            dragHandle = new TextBlock { Text = "⋮⋮", FontSize = 15, Foreground = ColorBrush("#9EA0A5"),
-                Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center };
-            row.Children.Add(dragHandle);
-            var fiveGroup = CreateQuotaGroup("5 小时", out fiveLabel, out fiveText, out fiveFill, out fiveTrack);
-            var weekGroup = CreateQuotaGroup("一周", out weekLabel, out weekText, out weekFill, out weekTrack);
+            row.Children.Add(new TextBlock { Text = "⋮⋮", FontSize = 15, Foreground = ColorBrush("#9EA0A5"),
+                Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center });
+            Border firstTrack, secondTrack;
+            var fiveGroup = CreateQuotaGroup("5 小时", out fiveText, out fiveFill, out firstTrack);
+            var weekGroup = CreateQuotaGroup("一周", out weekText, out weekFill, out secondTrack);
             row.Children.Add(fiveGroup);
             row.Children.Add(new Border { Width = 1, Height = 18, Background = ColorBrush("#4A4B4E"), Margin = new Thickness(10, 0, 10, 0) });
             row.Children.Add(weekGroup);
@@ -118,7 +118,6 @@ namespace CodexQuota
                 var menu = new System.Windows.Forms.ContextMenuStrip();
                 menu.Items.Add("立即刷新", null, delegate { Dispatcher.BeginInvoke(new Action(RefreshNow)); });
                 menu.Items.Add("用量详情", null, delegate { Dispatcher.BeginInvoke(new Action(ShowDetails)); });
-                menu.Items.Add("自定义配色…", null, delegate { Dispatcher.BeginInvoke(new Action(ShowColorSettings)); });
                 menu.Items.Add("恢复默认位置", null, delegate { Dispatcher.BeginInvoke(new Action(ResetPosition)); });
                 autoStart = new System.Windows.Forms.ToolStripMenuItem("登录 Windows 后自动启动") { Checked = PlatformSupport.IsAutoStartEnabled(), CheckOnClick = false };
                 autoStart.Click += delegate {
@@ -134,7 +133,6 @@ namespace CodexQuota
                 followTimer.Start(); refreshTimer.Start();
                 Dispatcher.BeginInvoke(new Action(FollowForegroundWindow));
             }
-            ApplyColorSettings();
             Closed += delegate { DisposeResources(); };
         }
 
@@ -144,12 +142,11 @@ namespace CodexQuota
             brush.Freeze(); return brush;
         }
 
-        static StackPanel CreateQuotaGroup(string name, out TextBlock label, out TextBlock value, out Border fill, out Border track)
+        static StackPanel CreateQuotaGroup(string name, out TextBlock value, out Border fill, out Border track)
         {
             var group = new StackPanel { Width = 118, Orientation = Orientation.Vertical };
             var labels = new Grid();
-            label = new TextBlock { Text = name, Foreground = ColorBrush("#CFD1D5") };
-            labels.Children.Add(label);
+            labels.Children.Add(new TextBlock { Text = name, Foreground = ColorBrush("#CFD1D5") });
             value = new TextBlock { Text = "—", Foreground = ColorBrush("#F5F6F7"), FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Right };
             labels.Children.Add(value);
             group.Children.Add(labels);
@@ -173,8 +170,7 @@ namespace CodexQuota
             UpdateWindow(value == null ? null : value.Weekly, weekText, weekFill);
             string status = value == null ? "读取中" : StatusLabel(value);
             statusText.Text = status;
-            statusText.Foreground = ColorBrush(value != null && value.Status == QuotaStatus.Error
-                ? UsageBarPalette.ErrorColor(settings.BackgroundColor) : UsageBarPalette.MutedTextColor(settings.BackgroundColor));
+            statusText.Foreground = value != null && value.Status == QuotaStatus.Error ? ColorBrush("#F3C779") : ColorBrush("#ACAFB4");
             panel.ToolTip = DetailsText();
             AutomationProperties.SetHelpText(panel, DetailsText());
             if (tray != null)
@@ -185,38 +181,12 @@ namespace CodexQuota
             WriteRuntimeStatus(false);
         }
 
-        void UpdateWindow(QuotaWindow value, TextBlock text, Border fill)
+        static void UpdateWindow(QuotaWindow value, TextBlock text, Border fill)
         {
-            if (value == null) { text.Text = "暂无数据"; fill.Width = 0; fill.Background = ColorBrush(settings.ProgressColor); return; }
+            if (value == null) { text.Text = "暂无数据"; fill.Width = 0; return; }
             text.Text = value.RemainingPercent.ToString("0.#", CultureInfo.InvariantCulture) + "%";
             fill.Width = 118 * value.RemainingPercent / 100.0;
-            fill.Background = ColorBrush(value.RemainingPercent <= 10 ? "#FF9990" : value.RemainingPercent <= 20 ? "#F3C779" : settings.ProgressColor);
-        }
-
-        void ApplyColorSettings()
-        {
-            panel.Background = ColorBrush(settings.BackgroundColor);
-            panel.BorderBrush = ColorBrush(UsageBarPalette.BorderColor(settings.BackgroundColor));
-            var secondaryColor = ColorBrush(UsageBarPalette.SecondaryTextColor(settings.BackgroundColor));
-            dragHandle.Foreground = secondaryColor;
-            fiveLabel.Foreground = secondaryColor;
-            weekLabel.Foreground = secondaryColor;
-            statusText.Foreground = ColorBrush(UsageBarPalette.MutedTextColor(settings.BackgroundColor));
-            fiveText.Foreground = ColorBrush(settings.TextColor);
-            weekText.Foreground = ColorBrush(settings.TextColor);
-            var trackColor = ColorBrush(UsageBarPalette.TrackColor(settings.BackgroundColor));
-            fiveTrack.Background = trackColor;
-            weekTrack.Background = trackColor;
-            if (snapshot == null)
-            {
-                fiveFill.Background = ColorBrush(settings.ProgressColor);
-                weekFill.Background = ColorBrush(settings.ProgressColor);
-            }
-            else
-            {
-                UpdateWindow(snapshot.FiveHour, fiveText, fiveFill);
-                UpdateWindow(snapshot.Weekly, weekText, weekFill);
-            }
+            fill.Background = ColorBrush(value.RemainingPercent <= 10 ? "#FF9990" : value.RemainingPercent <= 20 ? "#F3C779" : "#88D6B5");
         }
 
         static string StatusLabel(QuotaSnapshot value)
@@ -327,28 +297,6 @@ namespace CodexQuota
             settings.OffsetX = 0; settings.OffsetY = 8;
             try { PlatformSupport.SaveSettings(settings); } catch { ShowTrayMessage("默认位置暂未保存。"); }
             Place();
-        }
-
-        void ShowColorSettings()
-        {
-            var dialog = new ColorSettingsWindow(settings) { Owner = this };
-            if (dialog.ShowDialog() != true) return;
-            string oldBackground = settings.BackgroundColor;
-            string oldText = settings.TextColor;
-            string oldProgress = settings.ProgressColor;
-            settings.BackgroundColor = dialog.SelectedBackgroundColor;
-            settings.TextColor = dialog.SelectedTextColor;
-            settings.ProgressColor = dialog.SelectedProgressColor;
-            try { PlatformSupport.SaveSettings(settings); }
-            catch
-            {
-                settings.BackgroundColor = oldBackground;
-                settings.TextColor = oldText;
-                settings.ProgressColor = oldProgress;
-                ShowTrayMessage("配色暂未保存；本次运行仍使用原配色。");
-                return;
-            }
-            ApplyColorSettings();
         }
 
         void ShowDetails() { MessageBox.Show(DetailsText(), "Codex 剩余用量", MessageBoxButton.OK, MessageBoxImage.Information); }

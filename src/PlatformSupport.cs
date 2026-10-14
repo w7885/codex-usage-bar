@@ -7,99 +7,16 @@ using System.Runtime.Serialization.Json;
 using System.Security.Principal;
 using System.Threading;
 using Microsoft.Win32;
-using System.Windows.Media;
 
 namespace CodexQuota
 {
     [DataContract]
     public sealed class UsageBarSettings
     {
-        public const string DefaultBackgroundColor = "#202123";
-        public const string DefaultTextColor = "#F5F6F7";
-        public const string DefaultProgressColor = "#88D6B5";
-
-        public UsageBarSettings() { SetDefaultValues(); }
+        public UsageBarSettings() { OffsetY = 8; }
         [DataMember(Name = "offsetX")] public double OffsetX { get; set; }
         [DataMember(Name = "offsetY")] public double OffsetY { get; set; }
-        [DataMember(Name = "backgroundColor")] public string BackgroundColor { get; set; }
-        [DataMember(Name = "textColor")] public string TextColor { get; set; }
-        [DataMember(Name = "progressColor")] public string ProgressColor { get; set; }
-
-        [OnDeserializing] private void InitializeDefaults(StreamingContext context) { SetDefaultValues(); }
-
-        public void RestoreDefaultColors()
-        {
-            BackgroundColor = DefaultBackgroundColor;
-            TextColor = DefaultTextColor;
-            ProgressColor = DefaultProgressColor;
-        }
-
-        private void SetDefaultValues()
-        {
-            OffsetY = 8;
-            RestoreDefaultColors();
-        }
-    }
-
-    internal static class UsageBarPalette
-    {
-        internal static string BorderColor(string background)
-        {
-            if (String.Equals(background, UsageBarSettings.DefaultBackgroundColor, StringComparison.OrdinalIgnoreCase)) return "#48494C";
-            return Blend(background, SecondaryTextColor(background), 0.28);
-        }
-
-        internal static string TrackColor(string background)
-        {
-            if (String.Equals(background, UsageBarSettings.DefaultBackgroundColor, StringComparison.OrdinalIgnoreCase)) return "#4B4D52";
-            return Blend(background, SecondaryTextColor(background), 0.18);
-        }
-
-        internal static string SecondaryTextColor(string background)
-        {
-            if (String.Equals(background, UsageBarSettings.DefaultBackgroundColor, StringComparison.OrdinalIgnoreCase)) return "#CFD1D5";
-            return Luminance(Parse(background)) >= 0.18 ? "#202124" : "#F5F6F7";
-        }
-
-        internal static string MutedTextColor(string background)
-        {
-            if (String.Equals(background, UsageBarSettings.DefaultBackgroundColor, StringComparison.OrdinalIgnoreCase)) return "#ACAFB4";
-            return SecondaryTextColor(background);
-        }
-
-        internal static string ErrorColor(string background)
-        {
-            if (String.Equals(background, UsageBarSettings.DefaultBackgroundColor, StringComparison.OrdinalIgnoreCase)) return "#F3C779";
-            return Luminance(Parse(background)) >= 0.18 ? "#805000" : "#F3C779";
-        }
-
-        private static string Blend(string first, string second, double amount)
-        {
-            Color a = Parse(first), b = Parse(second);
-            return "#" + Mix(a.R, b.R, amount).ToString("X2")
-                + Mix(a.G, b.G, amount).ToString("X2")
-                + Mix(a.B, b.B, amount).ToString("X2");
-        }
-
-        private static byte Mix(byte first, byte second, double amount)
-        {
-            return (byte)Math.Round(first + (second - first) * amount);
-        }
-
-        private static Color Parse(string value)
-        {
-            return (Color)ColorConverter.ConvertFromString(value);
-        }
-
-        private static double Luminance(Color color)
-        {
-            return 0.2126 * Linear(color.R / 255.0) + 0.7152 * Linear(color.G / 255.0) + 0.0722 * Linear(color.B / 255.0);
-        }
-
-        private static double Linear(double channel)
-        {
-            return channel <= 0.04045 ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4);
-        }
+        [OnDeserializing] private void InitializeDefaults(StreamingContext context) { OffsetY = 8; }
     }
 
     public static class PlatformSupport
@@ -148,13 +65,7 @@ namespace CodexQuota
                 using (var stream = new FileStream(SettingsPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     var settings = (UsageBarSettings)new DataContractJsonSerializer(typeof(UsageBarSettings)).ReadObject(stream);
-                    if (settings != null && ValidOffset(settings.OffsetX) && ValidOffset(settings.OffsetY))
-                    {
-                        if (!ValidColor(settings.BackgroundColor)) settings.BackgroundColor = UsageBarSettings.DefaultBackgroundColor;
-                        if (!ValidColor(settings.TextColor)) settings.TextColor = UsageBarSettings.DefaultTextColor;
-                        if (!ValidColor(settings.ProgressColor)) settings.ProgressColor = UsageBarSettings.DefaultProgressColor;
-                        return settings;
-                    }
+                    if (settings != null && ValidOffset(settings.OffsetX) && ValidOffset(settings.OffsetY)) return settings;
                 }
             }
             catch (IOException) { }
@@ -167,9 +78,7 @@ namespace CodexQuota
         public static void SaveSettings(UsageBarSettings settings)
         {
             if (settings == null) throw new ArgumentNullException("settings");
-            if (!ValidOffset(settings.OffsetX) || !ValidOffset(settings.OffsetY)
-                || !ValidColor(settings.BackgroundColor) || !ValidColor(settings.TextColor) || !ValidColor(settings.ProgressColor))
-                throw new ArgumentOutOfRangeException("settings");
+            if (!ValidOffset(settings.OffsetX) || !ValidOffset(settings.OffsetY)) throw new ArgumentOutOfRangeException("settings");
             Directory.CreateDirectory(StateDirectory);
             string temporary = SettingsPath + ".tmp";
             try
@@ -188,14 +97,6 @@ namespace CodexQuota
         private static bool ValidOffset(double offset)
         {
             return !Double.IsNaN(offset) && !Double.IsInfinity(offset) && Math.Abs(offset) <= 10000;
-        }
-
-        internal static bool ValidColor(string color)
-        {
-            if (String.IsNullOrEmpty(color) || color.Length != 7 || color[0] != '#') return false;
-            for (int index = 1; index < color.Length; index++)
-                if (!Uri.IsHexDigit(color[index])) return false;
-            return true;
         }
 
         public static bool IsAutoStartEnabled()

@@ -63,7 +63,7 @@ namespace CodexQuota.Tests
         private static void HappyAndOwnedProcess(string root)
         {
             int childId;
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 2000))
             {
                 QuotaSnapshot snapshot = Read(client);
                 Check(snapshot.Status == QuotaStatus.Ready && snapshot.HasData,
@@ -100,7 +100,7 @@ namespace CodexQuota.Tests
 
         private static void EndOfStreamRecovers(string root)
         {
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 1500))
             {
                 QuotaSnapshot initial = Read(client);
                 QuotaSnapshot failed = Read(client);
@@ -113,7 +113,7 @@ namespace CodexQuota.Tests
 
         private static void AccountSwitchDoesNotRepublishOldData(string root)
         {
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 2000))
             using (var newAccountReady = new ManualResetEventSlim(false))
             {
                 QuotaSnapshot initial = Read(client);
@@ -140,7 +140,7 @@ namespace CodexQuota.Tests
 
         private static void NotificationReadsCompleteSnapshot(string root)
         {
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 2000))
             using (var notificationReady = new ManualResetEventSlim(false))
             {
                 QuotaSnapshot notificationSnapshot = null;
@@ -161,7 +161,7 @@ namespace CodexQuota.Tests
 
         private static void SignOutClearsCachedData(string root)
         {
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 2000))
             {
                 Check(Read(client).HasData, "Expected a cache before sign-out.");
                 QuotaSnapshot signedOut = Read(client);
@@ -172,7 +172,7 @@ namespace CodexQuota.Tests
 
         private static void UnsupportedAccountDoesNotClaimQuota(string root)
         {
-            using (var client = Client(root, 5000))
+            using (var client = Client(root, 2000))
             {
                 QuotaSnapshot snapshot = Read(client);
                 Check(snapshot.Status == QuotaStatus.UnsupportedAccount && !snapshot.HasData && !snapshot.LastUpdatedAt.HasValue,
@@ -182,7 +182,7 @@ namespace CodexQuota.Tests
 
         private static void DisposeDuringInitializationStopsChild(string root)
         {
-            var client = Client(root, 5000);
+            var client = Client(root, 3000);
             Task<QuotaSnapshot> operation = client.GetSnapshotAsync();
             int childId = 0;
             try
