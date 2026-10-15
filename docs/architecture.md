@@ -1,6 +1,6 @@
 # 架构与数据流
 
-界面使用 WPF、托盘使用 Windows Forms。程序通过 .NET Framework 4.8 的 C# 编译器构建，依赖系统组件与用户安装的 Codex。
+界面使用 WPF、托盘使用 Windows Forms。程序通过 .NET Framework 4.8 的 C# 编译器构建，依赖系统组件与用户安装的 Codex。EXE 文件图标通过 Win32 icon 编译选项嵌入；托盘使用同一多尺寸 ICO 作为程序集资源，不依赖安装目录外的图标文件。
 
 ## 数据
 

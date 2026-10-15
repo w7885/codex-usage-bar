@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Codex Usage Bar — twin progress tracks</title>
+  <path d="M19 3 H45 C53.837 3 61 10.163 61 19 V45 C61 53.837 53.837 61 45 61 H19 C10.163 61 3 53.837 3 45 V19 C3 10.163 10.163 3 19 3 Z" fill="#202123" stroke="#48494C" stroke-width="1"/>
+  <path d="M16 21 H48" fill="none" stroke="#4B4D52" stroke-width="7" stroke-linecap="round"/>
+  <path d="M16 21 H37" fill="none" stroke="#88D6B5" stroke-width="7" stroke-linecap="round"/>
+  <path d="M16 39 H48" fill="none" stroke="#4B4D52" stroke-width="7" stroke-linecap="round"/>
+  <path d="M16 39 H31" fill="none" stroke="#88D6B5" stroke-width="7" stroke-linecap="round"/>
+</svg>

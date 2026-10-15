@@ -47,6 +47,8 @@ namespace CodexQuota
         readonly Border panel;
         readonly System.Windows.Forms.NotifyIcon tray;
         readonly System.Windows.Forms.ToolStripMenuItem autoStart;
+        readonly System.Drawing.Icon trayIcon;
+        readonly System.IO.MemoryStream trayIconStream;
         CodexWindowInfo target;
         QuotaSnapshot snapshot;
         bool foreground, refreshing, disposed, dragging;
@@ -113,7 +115,9 @@ namespace CodexQuota
 
             if (enableTimers)
             {
-                tray = new System.Windows.Forms.NotifyIcon { Icon = System.Drawing.SystemIcons.Information,
+                trayIconStream = LoadTrayIconStream();
+                trayIcon = new System.Drawing.Icon(trayIconStream);
+                tray = new System.Windows.Forms.NotifyIcon { Icon = trayIcon,
                     Text = "Codex 剩余用量", Visible = true };
                 var menu = new System.Windows.Forms.ContextMenuStrip();
                 menu.Items.Add("立即刷新", null, delegate { Dispatcher.BeginInvoke(new Action(RefreshNow)); });
@@ -140,6 +144,19 @@ namespace CodexQuota
         {
             var brush = (SolidColorBrush)new BrushConverter().ConvertFromString(color);
             brush.Freeze(); return brush;
+        }
+
+        static System.IO.MemoryStream LoadTrayIconStream()
+        {
+            var resource = typeof(OverlayWindow).Assembly.GetManifestResourceStream("CodexQuota.UsageBar.ico");
+            if (resource == null) throw new InvalidOperationException("The embedded tray icon is missing.");
+            using (resource)
+            {
+                var copy = new System.IO.MemoryStream();
+                resource.CopyTo(copy);
+                copy.Position = 0;
+                return copy;
+            }
         }
 
         static StackPanel CreateQuotaGroup(string name, out TextBlock value, out Border fill, out Border track)
@@ -332,6 +349,8 @@ namespace CodexQuota
             disposed = true; followTimer.Stop(); refreshTimer.Stop();
             if (client != null) { client.SnapshotUpdated -= ReceiveSnapshot; client.Dispose(); }
             if (tray != null) { tray.Visible = false; if (tray.ContextMenuStrip != null) tray.ContextMenuStrip.Dispose(); tray.Dispose(); }
+            if (trayIcon != null) trayIcon.Dispose();
+            if (trayIconStream != null) trayIconStream.Dispose();
             WriteRuntimeStatus(true);
         }
     }
