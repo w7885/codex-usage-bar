@@ -18,7 +18,9 @@ namespace CodexQuota.Tests
         internal static int Run(string[] args)
         {
             if (args.Length == 0 || args[0] != "app-server") return 2;
-            Console.InputEncoding = new UTF8Encoding(false);
+            // Process.Start can emit a UTF-8 BOM when it creates StandardInput
+            // under a UTF-8 console. Console.ReadLine does not detect that BOM.
+            Console.SetIn(new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false), true));
             Console.OutputEncoding = new UTF8Encoding(false);
             string scenario = Environment.GetEnvironmentVariable("QUOTA_TEST_SCENARIO") ?? "happy";
             string pidFile = Environment.GetEnvironmentVariable("QUOTA_TEST_PID_FILE");

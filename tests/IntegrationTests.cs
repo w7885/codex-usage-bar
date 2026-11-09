@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +13,7 @@ namespace CodexQuota.Tests
         internal static void Run()
         {
             RunScenario("happy", HappyAndOwnedProcess);
+            RunScenario("utf8-console", Utf8ConsoleStartsServer);
             RunScenario("timeout-second", TimeoutPreservesCacheAndIgnoresLateReply);
             RunScenario("eof-second", EndOfStreamRecovers);
             RunScenario("switch-during-read", AccountSwitchDoesNotRepublishOldData);
@@ -74,6 +76,19 @@ namespace CodexQuota.Tests
                 Check(IsAlive(childId), "The fake app-server must be alive before disposal.");
             }
             Check(WaitForExit(childId, 2000), "Disposal left an owned app-server running.");
+        }
+
+        private static void Utf8ConsoleStartsServer(string root)
+        {
+            Encoding previousEncoding = Console.InputEncoding;
+            try
+            {
+                // .NET Framework creates the redirected StandardInput writer from
+                // the console code page; UTF-8 can prefix the first RPC with a BOM.
+                Console.InputEncoding = new UTF8Encoding(true);
+                HappyAndOwnedProcess(root);
+            }
+            finally { Console.InputEncoding = previousEncoding; }
         }
 
         private static void TimeoutPreservesCacheAndIgnoresLateReply(string root)
